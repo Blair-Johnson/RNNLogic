@@ -25,6 +25,12 @@ class Predictor(torch.nn.Module):
         if entity_feature == 'bias':
             self.bias = torch.nn.parameter.Parameter(torch.zeros(self.num_entities))
     
+    def _apply_boolean_inference(self, x):
+        """Convert path counts to boolean values (1 if count > 0, else 0)."""
+        if self.boolean_inference:
+            return (x > 0).float()
+        return x
+    
     def set_rules(self, input):
         self.rules = list()
         if type(input) == list:
@@ -62,9 +68,7 @@ class Predictor(torch.nn.Module):
             assert r_head == query_r
 
             x = self.graph.grounding(all_h, r_head, r_body, edges_to_remove)
-            # Convert path counts to boolean values if boolean_inference is enabled
-            if self.boolean_inference:
-                x = (x > 0).float()
+            x = self._apply_boolean_inference(x)
             score += x * self.rule_weights[index]
             mask += x
         
@@ -95,9 +99,7 @@ class Predictor(torch.nn.Module):
             assert r_head == query_r
 
             x = self.graph.grounding(all_h, r_head, r_body, edges_to_remove)
-            # Convert path counts to boolean values if boolean_inference is enabled
-            if self.boolean_inference:
-                x = (x > 0).float()
+            x = self._apply_boolean_inference(x)
             score = x * self.rule_weights[index]
             mask += x
 
@@ -169,6 +171,12 @@ class PredictorPlus(torch.nn.Module):
             self.bias = torch.nn.parameter.Parameter(torch.zeros(self.num_entities))
         elif entity_feature == 'RotatE':
             self.RotatE = RotatE(embedding_path)
+    
+    def _apply_boolean_inference(self, x):
+        """Convert path counts to boolean values (1 if count > 0, else 0)."""
+        if self.boolean_inference:
+            return (x > 0).float()
+        return x
 
     def set_rules(self, input):
         self.rules = list()
@@ -230,9 +238,7 @@ class PredictorPlus(torch.nn.Module):
             assert r_head == query_r
 
             count = self.graph.grounding(all_h, r_head, r_body, edges_to_remove).float()
-            # Convert path counts to boolean values if boolean_inference is enabled
-            if self.boolean_inference:
-                count = (count > 0).float()
+            count = self._apply_boolean_inference(count)
             mask += count
 
             rule_index.append(index)
